@@ -1,4 +1,5 @@
 import analysis from "./analysis.json";
+import Color from "color";
 
 interface TimeDuration {
   start: number; // seconds
@@ -61,11 +62,10 @@ interface Context {
   segmentChanged: boolean;
   beatChanged: boolean;
   barChanged: boolean;
+
   msUntilNextSegment: number;
   msUntilNextBeat: number;
   msUntilNextBar: number;
-
-  beatDuration: number;
 }
 
 import createPlayer from "web-audio-player";
@@ -87,6 +87,7 @@ function updateContext(c: Context, analysis: Analysis) {
       analysis.beats[c.currentBeatIndex].duration
   ) {
     c.currentBeatIndex++;
+    c.beatChanged = true;
   }
 
   if (
@@ -95,6 +96,7 @@ function updateContext(c: Context, analysis: Analysis) {
       analysis.bars[c.currentBarIndex].duration
   ) {
     c.currentBarIndex++;
+    c.barChanged = true;
   }
 
   if (
@@ -103,6 +105,7 @@ function updateContext(c: Context, analysis: Analysis) {
       analysis.segments[c.currentSegmentIndex].duration
   ) {
     c.currentSegmentIndex++;
+    c.segmentChanged = true;
   }
 
   const nextBeatIdx = Math.min(
@@ -136,7 +139,6 @@ audio.on("load", () => {
   audio.play();
 
   const context = {
-    beatDuration: averageBeatDuration(analysis),
     timeStart: new Date(),
     currentTime: new Date(),
     msSinceStart: 0,
@@ -163,6 +165,10 @@ audio.on("load", () => {
 
   updateContext(context, analysis);
 
+  context.beatChanged = true;
+  context.barChanged = true;
+  context.segmentChanged = true;
+
   setInterval(() => {
     requestAnimationFrame(() => {
       frame(context, analysis);
@@ -174,16 +180,6 @@ audio.on("load", () => {
 audio.on("ended", () => {
   console.log("Audio ended...");
 });
-
-function averageBeatDuration(a: Analysis) {
-  let sum = 0;
-
-  for (let i = 0; i < a.beats.length; i++) {
-    sum += a.beats[i].duration;
-  }
-
-  return sum / a.beats.length;
-}
 
 function clear(c: Context) {
   c.ctx.clearRect(0, 0, c.width, c.height);
@@ -201,10 +197,17 @@ function randomColor() {
 
   return `rgba(${r}, ${g}, ${b}, 1)`;
 }
-function frame(c: Context, analysis: Analysis) {
-  console.log(c.msUntilNextBar);
 
-  if (c.barChanged) {
-    fillWithColor(c, randomColor());
-  }
+function frame(c: Context, analysis: Analysis) {
+  const barCompletionPercentage =
+    c.msUntilNextBar / (c.currentBar.duration * 1000);
+  const beatCompletionPercentage =
+    c.msUntilNextBeat / (c.currentBeat.duration * 1000);
+  const segmentCompletionPercentage =
+    c.msUntilNextSegment / (c.currentSegment.duration * 1000);
+
+  const theColor = Color.rgb(100 + barCompletionPercentage * 155, 200, 200);
+  const modified = theColor.lighten(beatCompletionPercentage / 2);
+
+  fillWithColor(c, modified.toString());
 }
