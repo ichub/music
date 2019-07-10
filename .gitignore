@@ -1,0 +1,7 @@
+.cache
+dist
+node_modules
+analysis.json
+basic
+bearer.txt
+token.
