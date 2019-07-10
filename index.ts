@@ -1,15 +1,23 @@
 import analysis from "./analysis.json";
 
+interface TimeDuration {
+  start: number; // seconds
+  duration: number; // seconds
+  confidence: number; // 0 - 1
+}
 interface Analysis {
   beats: Beat[];
   segments: Segment[];
+  bars: Bar[];
 }
 
-interface Beat {
+interface Beat extends TimeDuration {
   start: number;
   end: number;
   confidence: number;
 }
+
+interface Bar extends TimeDuration {}
 
 interface Segment {
   confidence: number;
@@ -36,6 +44,8 @@ interface Context {
   msSinceStart: number;
   framesSinceStart: number;
   currentSegmentIndex: number;
+  currentBeatIndex: number;
+  currentBarIndex: number;
 }
 
 const canvas: HTMLCanvasElement = document.querySelector("#the-canvas");
@@ -58,6 +68,22 @@ function updateContext(c: Context, analysis: Analysis) {
   ) {
     c.currentSegmentIndex++;
   }
+
+  // find the current bar
+  while (
+    c.msSinceStart / 1000 > analysis.bars[c.currentBarIndex].start &&
+    analysis.bars.length > c.currentBarIndex
+  ) {
+    c.currentBarIndex++;
+  }
+
+  // find the current beat
+  while (
+    c.msSinceStart / 1000 > analysis.beats[c.currentBeatIndex].start &&
+    analysis.beats.length > c.currentBeatIndex
+  ) {
+    c.currentBeatIndex++;
+  }
 }
 
 audio.on("load", () => {
@@ -68,7 +94,9 @@ audio.on("load", () => {
     currentTime: new Date(),
     msSinceStart: 0,
     framesSinceStart: 0,
-    currentSegmentIndex: 0
+    currentSegmentIndex: 0,
+    currentBeatIndex: 0,
+    currentBarIndex: 0
   };
 
   console.log(analysis);
@@ -89,5 +117,9 @@ audio.on("ended", () => {
 });
 
 function frame(context: Context, analysis: Analysis) {
-  console.log(`current segment idx ${context.currentSegmentIndex}`);
+  console.log(
+    ` bar: ${context.currentBarIndex} beat: ${
+      context.currentBeatIndex
+    } segment: ${context.currentSegmentIndex}`
+  );
 }
