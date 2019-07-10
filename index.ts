@@ -39,6 +39,9 @@ interface Segment {
 }
 
 interface Context {
+  ctx: CanvasRenderingContext2D;
+  width: number;
+  height: number;
   timeStart: Date;
   currentTime: Date;
   msSinceStart: number;
@@ -46,11 +49,24 @@ interface Context {
   currentSegmentIndex: number;
   currentBeatIndex: number;
   currentBarIndex: number;
-}
 
-const canvas: HTMLCanvasElement = document.querySelector("#the-canvas");
-const ctx = canvas.getContext("2d");
-const a = analysis as Analysis;
+  currentBeat: Beat;
+  currentBar: Bar;
+  currentSegment;
+
+  nextBeat: Beat;
+  nextBar: Bar;
+  nextSegment: Segment;
+
+  segmentChanged: boolean;
+  beatChanged: boolean;
+  barChanged: boolean;
+  msUntilNextSegment: number;
+  msUntilNextBeat: number;
+  msUntilNextBar: number;
+
+  beatDuration: number;
+}
 
 import createPlayer from "web-audio-player";
 
@@ -61,65 +77,134 @@ function updateContext(c: Context, analysis: Analysis) {
   c.msSinceStart = c.currentTime.getTime() - c.timeStart.getTime();
   c.framesSinceStart++;
 
-  // find the current segment
-  while (
-    c.msSinceStart / 1000 > analysis.segments[c.currentSegmentIndex].start &&
-    analysis.segments.length > c.currentSegmentIndex
+  c.barChanged = false;
+  c.beatChanged = false;
+  c.segmentChanged = false;
+
+  if (
+    c.msSinceStart / 1000 >
+    analysis.beats[c.currentBeatIndex].start +
+      analysis.beats[c.currentBeatIndex].duration
   ) {
-    c.currentSegmentIndex++;
+    c.currentBeatIndex++;
   }
 
-  // find the current bar
-  while (
-    c.msSinceStart / 1000 > analysis.bars[c.currentBarIndex].start &&
-    analysis.bars.length > c.currentBarIndex
+  if (
+    c.msSinceStart / 1000 >
+    analysis.bars[c.currentBarIndex].start +
+      analysis.bars[c.currentBarIndex].duration
   ) {
     c.currentBarIndex++;
   }
 
-  // find the current beat
-  while (
-    c.msSinceStart / 1000 > analysis.beats[c.currentBeatIndex].start &&
-    analysis.beats.length > c.currentBeatIndex
+  if (
+    c.msSinceStart / 1000 >
+    analysis.segments[c.currentSegmentIndex].start +
+      analysis.segments[c.currentSegmentIndex].duration
   ) {
-    c.currentBeatIndex++;
+    c.currentSegmentIndex++;
   }
+
+  const nextBeatIdx = Math.min(
+    c.currentBeatIndex + 1,
+    analysis.beats.length - 1
+  );
+  const nextSegmentIdx = Math.min(
+    c.currentSegmentIndex + 1,
+    analysis.segments.length - 1
+  );
+  const nextBarIdx = Math.min(c.currentBarIndex + 1, analysis.bars.length - 1);
+
+  c.currentBeat = analysis.beats[c.currentBeatIndex];
+  c.currentBar = analysis.bars[c.currentBarIndex];
+  c.currentSegment = analysis.segments[c.currentSegmentIndex];
+
+  c.nextBar = analysis.bars[nextBarIdx];
+  c.nextBeat = analysis.beats[nextBeatIdx];
+  c.nextSegment = analysis.segments[nextSegmentIdx];
+
+  c.msUntilNextSegment = c.nextSegment.start * 1000 - c.msSinceStart;
+  c.msUntilNextBar = c.nextBar.start * 1000 - c.msSinceStart;
+  c.msUntilNextBeat = c.nextBeat.start * 1000 - c.msSinceStart;
 }
 
 audio.on("load", () => {
+  const canvas: HTMLCanvasElement = document.querySelector("#the-canvas");
+  const ctx = canvas.getContext("2d");
+
   audio.node.connect(audio.context.destination);
+  audio.play();
 
   const context = {
+    beatDuration: averageBeatDuration(analysis),
     timeStart: new Date(),
     currentTime: new Date(),
     msSinceStart: 0,
     framesSinceStart: 0,
+    segmentChanged: false,
+    beatChanged: false,
+    barChanged: false,
     currentSegmentIndex: 0,
     currentBeatIndex: 0,
-    currentBarIndex: 0
+    currentBarIndex: 0,
+    width: 800,
+    height: 600,
+    ctx: ctx,
+    msUntilNextSegment: 0,
+    msUntilNextBeat: 0,
+    msUntilNextBar: 0,
+    currentBeat: null,
+    currentBar: null,
+    currentSegment: null,
+    nextBeat: null,
+    nextBar: null,
+    nextSegment: null
   };
 
-  console.log(analysis);
+  updateContext(context, analysis);
 
-  function start() {
-    setInterval(() => {
+  setInterval(() => {
+    requestAnimationFrame(() => {
       frame(context, analysis);
       updateContext(context, analysis);
-    }, 1000 / 60);
-    audio.play();
-  }
-
-  start();
+    });
+  }, 1000 / 100);
 });
 
 audio.on("ended", () => {
   console.log("Audio ended...");
 });
 
-function frame(context: Context, analysis: Analysis) {
-  console.log(
-    ` bar: ${context.currentBarIndex} beat: ${
-      context.currentBeatIndex
-    } segment: ${context.currentSegmentIndex}`
-  );
+function averageBeatDuration(a: Analysis) {
+  let sum = 0;
+
+  for (let i = 0; i < a.beats.length; i++) {
+    sum += a.beats[i].duration;
+  }
+
+  return sum / a.beats.length;
+}
+
+function clear(c: Context) {
+  c.ctx.clearRect(0, 0, c.width, c.height);
+}
+
+function fillWithColor(c: Context, color: string) {
+  c.ctx.fillStyle = color;
+  c.ctx.fillRect(0, 0, c.width, c.height);
+}
+
+function randomColor() {
+  const r = Math.min(255, Math.max(0, Math.random() * 255));
+  const g = Math.min(255, Math.max(0, Math.random() * 255));
+  const b = Math.min(255, Math.max(0, Math.random() * 255));
+
+  return `rgba(${r}, ${g}, ${b}, 1)`;
+}
+function frame(c: Context, analysis: Analysis) {
+  console.log(c.msUntilNextBar);
+
+  if (c.barChanged) {
+    fillWithColor(c, randomColor());
+  }
 }
