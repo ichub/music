@@ -212,12 +212,36 @@ function randomColor() {
 }
 
 let baseColor = randomColor();
+let pixelSize = 10;
 
 function frame(c: Context, analysis: Analysis) {
   if (c.barChanged) {
     baseColor = randomColor();
   }
 
-  const modifiedColor = baseColor.lighten(c.barCompletionPercentage * 0.8);
-  fillWithColor(c, modifiedColor.toString());
+  renderPixels(c);
+
+  console.log("frame");
+}
+
+function renderPixels(c: Context) {
+  for (let x = 0; x < c.width / pixelSize; x++) {
+    for (let y = 0; y < c.height / pixelSize; y++) {
+      c.ctx.fillStyle = pixelColor(x, y, c).toString();
+      c.ctx.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
+    }
+  }
+}
+
+function pixelColor(x: number, y: number, c: Context) {
+  return Color.rgb(
+    pixelComponent(x, y, c),
+    pixelComponent(x, y, c),
+    pixelComponent(x, y, c)
+  );
+}
+function pixelComponent(x: number, y: number, c: Context) {
+  return (
+    Math.sin((x * y * c.msSinceStart) / 1000) * c.beatCompletionPercentage * 255
+  );
 }
