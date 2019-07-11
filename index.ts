@@ -204,9 +204,9 @@ function fillWithColor(c: Context, color: string) {
 }
 
 function randomColor() {
-  const r = Math.min(255, Math.max(0, Math.random() * 255));
-  const g = Math.min(255, Math.max(0, Math.random() * 255));
-  const b = Math.min(255, Math.max(0, Math.random() * 255));
+  const r = Math.min(255, Math.max(0, Math.random() * 200));
+  const g = Math.min(255, Math.max(0, Math.random() * 200));
+  const b = Math.min(255, Math.max(0, Math.random() * 200));
 
   return Color.rgb(r, g, b);
 }
