@@ -258,24 +258,70 @@ function clr(r: number, g: number, b: number): Color {
   return Color.rgb(clamp(r), clamp(g), clamp(b));
 }
 
+function renderTimbre(c: Context) {
+  const t = c.currentSegment.timbre;
+
+  const w = 10;
+  const space = 10;
+
+  ctx.fillStyle = "black";
+
+  for (let i = 0; i < t.length; i++) {
+    ctx.fillRect(100 + (w + space) * i, 200, w, t[i] * -1);
+  }
+}
+
+function rednerPitch(c: Context) {
+  const t = c.currentSegment.pitches;
+
+  const w = 10;
+  const space = 10;
+
+  ctx.fillStyle = "green";
+  for (let i = 0; i < t.length; i++) {
+    ctx.fillRect(500 + (w + space) * i, 200, w, t[i] * -1 * 50);
+  }
+}
+
+function renderCirlce(x: number, y: number, radius: number, randomNess = 0) {
+  const pointCount = 50;
+
+  ctx.beginPath();
+
+  let r = () => Math.random() * randomNess - randomNess / 2;
+
+  for (let i = 0; i < pointCount + 1; i++) {
+    let cx = x + Math.cos(((Math.PI * 2) / pointCount) * i) * (radius + r());
+    let cy = y + Math.sin(((Math.PI * 2) / pointCount) * i) * (radius + r());
+
+    if (i === 0) {
+      ctx.moveTo(cx, cy);
+    } else {
+      ctx.lineTo(cx, cy);
+    }
+  }
+
+  ctx.fill();
+}
 function frame(c: Context, analysis: Analysis) {
+  let size = Math.abs((c.barCompletionPercentage * 255) / 2);
+  let x = window.innerWidth / 2;
+  let y = window.innerHeight / 2;
+
+  console.log();
+
+  let brightness = c.currentSegment.timbre[1];
+  let beatness = c.currentSegment.timbre[3];
+  let loudness = c.currentSegment.timbre[0];
+
   ctx.fillStyle = clr(
     c.currentSegment.timbre[0],
     c.currentSegment.timbre[1],
     c.currentSegment.timbre[2]
   ).toString();
 
-  console.log(c.currentSegment.timbre);
-
-  let size = Math.abs((c.barCompletionPercentage * 255) / 2);
-  let x = window.innerWidth / 2;
-  let y = window.innerHeight / 2;
   clear(c);
-
-  ctx.beginPath();
-  ctx.arc(x, y, size, 0, 2 * Math.PI);
-  ctx.fill();
-
-  if (c.barChanged) {
-  }
+  renderCirlce(x, y, beatness, brightness / 10);
+  renderTimbre(c);
+  rednerPitch(c);
 }
