@@ -73,6 +73,7 @@ interface Context {
 }
 
 import createPlayer from "web-audio-player";
+import { palegoldenrod } from "color-name";
 
 var audio = createPlayer("/song.mp3");
 
@@ -147,7 +148,6 @@ const ctx = canvas.getContext("2d");
 
 audio.on("load", () => {
   audio.node.connect(audio.context.destination);
-  audio.play();
 
   const context = {
     timeStart: new Date(),
@@ -187,12 +187,36 @@ audio.on("load", () => {
 
   window.addEventListener("resize", () => onResize(context));
 
-  setInterval(() => {
-    requestAnimationFrame(() => {
-      frame(context, analysis);
-      updateContext(context, analysis);
-    });
-  }, 1000 / 100);
+  window.addEventListener("click", () => {
+    toggle();
+  });
+
+  let interval = null;
+
+  function toggle() {
+    if (interval !== null) {
+      pause();
+    } else {
+      start();
+    }
+  }
+  function start() {
+    audio.play();
+    interval = setInterval(() => {
+      requestAnimationFrame(() => {
+        frame(context, analysis);
+        updateContext(context, analysis);
+      });
+    }, 1000 / 100);
+  }
+
+  function pause() {
+    clearInterval(interval);
+    audio.pause();
+    interval = null;
+  }
+
+  start();
 });
 
 function onResize(c: Context) {
@@ -226,43 +250,32 @@ function randomColor() {
   return Color.rgb(r, g, b);
 }
 
-let baseColor = randomColor();
-let pixelSize = 30;
-
-function frame(c: Context, analysis: Analysis) {
-  if (c.barChanged) {
-    baseColor = randomColor();
-  }
-
-  renderPixels(c);
-
-  console.log("frame");
-}
-
-function renderPixels(c: Context) {
-  for (let x = 0; x < c.width / pixelSize; x++) {
-    for (let y = 0; y < c.height / pixelSize; y++) {
-      c.ctx.fillStyle = pixelColor(x, y, c).toString();
-      c.ctx.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
-    }
-  }
-}
-
 function clamp(val: number) {
   return (256 + (Math.floor(val) % 256)) % 256;
 }
-function pixelColor(x: number, y: number, c: Context) {
-  return Color.rgb(clamp(r(x, y, c)), clamp(g(x, y, c)), clamp(b(x, y, c)));
+
+function clr(r: number, g: number, b: number): Color {
+  return Color.rgb(clamp(r), clamp(g), clamp(b));
 }
 
-function r(x: number, y: number, c: Context) {
-  return c.currentSegment.timbre[0];
-}
+function frame(c: Context, analysis: Analysis) {
+  ctx.fillStyle = clr(
+    c.currentSegment.timbre[0],
+    c.currentSegment.timbre[1],
+    c.currentSegment.timbre[2]
+  ).toString();
 
-function g(x: number, y: number, c: Context) {
-  return c.currentSegment.timbre[1];
-}
+  console.log(c.currentSegment.timbre);
 
-function b(x: number, y: number, c: Context) {
-  return c.currentSegment.timbre[2];
+  let size = Math.abs((c.barCompletionPercentage * 255) / 2);
+  let x = window.innerWidth / 2;
+  let y = window.innerHeight / 2;
+  clear(c);
+
+  ctx.beginPath();
+  ctx.arc(x, y, size, 0, 2 * Math.PI);
+  ctx.fill();
+
+  if (c.barChanged) {
+  }
 }
