@@ -53,7 +53,7 @@ interface Context {
 
   currentBeat: Beat;
   currentBar: Bar;
-  currentSegment;
+  currentSegment: Segment;
 
   nextBeat: Beat;
   nextBar: Bar;
@@ -248,16 +248,21 @@ function renderPixels(c: Context) {
   }
 }
 
+function clamp(val: number) {
+  return (256 + (Math.floor(val) % 256)) % 256;
+}
 function pixelColor(x: number, y: number, c: Context) {
-  return Color.rgb(
-    pixelComponent(x, y, c),
-    pixelComponent(x, y, c),
-    pixelComponent(x, y, c)
-  );
+  return Color.rgb(clamp(r(x, y, c)), clamp(g(x, y, c)), clamp(b(x, y, c)));
 }
 
-function pixelComponent(x: number, y: number, c: Context) {
-  return (
-    Math.sin(x * y * c.framesSinceStart) * c.beatCompletionPercentage * 255
-  );
+function r(x: number, y: number, c: Context) {
+  return c.currentSegment.timbre[0];
+}
+
+function g(x: number, y: number, c: Context) {
+  return c.currentSegment.timbre[1];
+}
+
+function b(x: number, y: number, c: Context) {
+  return c.currentSegment.timbre[2];
 }
