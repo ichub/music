@@ -120,6 +120,7 @@ function updateContext(c: Context, analysis: Analysis) {
     c.currentSegmentIndex + 1,
     analysis.segments.length - 1
   );
+
   const nextBarIdx = Math.min(c.currentBarIndex + 1, analysis.bars.length - 1);
 
   c.currentBeat = analysis.beats[c.currentBeatIndex];
@@ -141,10 +142,10 @@ function updateContext(c: Context, analysis: Analysis) {
     c.msUntilNextSegment / (c.currentSegment.duration * 1000);
 }
 
-audio.on("load", () => {
-  const canvas: HTMLCanvasElement = document.querySelector("#the-canvas");
-  const ctx = canvas.getContext("2d");
+const canvas: HTMLCanvasElement = document.querySelector("#the-canvas");
+const ctx = canvas.getContext("2d");
 
+audio.on("load", () => {
   audio.node.connect(audio.context.destination);
   audio.play();
 
@@ -182,6 +183,10 @@ audio.on("load", () => {
   context.barChanged = true;
   context.segmentChanged = true;
 
+  onResize(context);
+
+  window.addEventListener("resize", () => onResize(context));
+
   setInterval(() => {
     requestAnimationFrame(() => {
       frame(context, analysis);
@@ -189,6 +194,16 @@ audio.on("load", () => {
     });
   }, 1000 / 100);
 });
+
+function onResize(c: Context) {
+  c.width = window.innerWidth;
+  c.height = window.innerHeight;
+
+  canvas.width = c.width;
+  canvas.height = c.height;
+  canvas.style.width = c.width + "px";
+  canvas.style.height = c.height + "px";
+}
 
 audio.on("ended", () => {
   console.log("Audio ended...");
@@ -212,7 +227,7 @@ function randomColor() {
 }
 
 let baseColor = randomColor();
-let pixelSize = 10;
+let pixelSize = 30;
 
 function frame(c: Context, analysis: Analysis) {
   if (c.barChanged) {
@@ -240,8 +255,9 @@ function pixelColor(x: number, y: number, c: Context) {
     pixelComponent(x, y, c)
   );
 }
+
 function pixelComponent(x: number, y: number, c: Context) {
   return (
-    Math.sin((x * y * c.msSinceStart) / 1000) * c.beatCompletionPercentage * 255
+    Math.sin(x * y * c.framesSinceStart) * c.beatCompletionPercentage * 255
   );
 }
