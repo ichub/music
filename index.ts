@@ -66,6 +66,10 @@ interface Context {
   msUntilNextSegment: number;
   msUntilNextBeat: number;
   msUntilNextBar: number;
+
+  barCompletionPercentage: number;
+  beatCompletionPercentage: number;
+  segmentCompletionPercentage: number;
 }
 
 import createPlayer from "web-audio-player";
@@ -129,6 +133,12 @@ function updateContext(c: Context, analysis: Analysis) {
   c.msUntilNextSegment = c.nextSegment.start * 1000 - c.msSinceStart;
   c.msUntilNextBar = c.nextBar.start * 1000 - c.msSinceStart;
   c.msUntilNextBeat = c.nextBeat.start * 1000 - c.msSinceStart;
+
+  c.barCompletionPercentage = c.msUntilNextBar / (c.currentBar.duration * 1000);
+  c.beatCompletionPercentage =
+    c.msUntilNextBeat / (c.currentBeat.duration * 1000);
+  c.segmentCompletionPercentage =
+    c.msUntilNextSegment / (c.currentSegment.duration * 1000);
 }
 
 audio.on("load", () => {
@@ -160,7 +170,10 @@ audio.on("load", () => {
     currentSegment: null,
     nextBeat: null,
     nextBar: null,
-    nextSegment: null
+    nextSegment: null,
+    barCompletionPercentage: 0,
+    beatCompletionPercentage: 0,
+    segmentCompletionPercentage: 0
   };
 
   updateContext(context, analysis);
@@ -195,19 +208,16 @@ function randomColor() {
   const g = Math.min(255, Math.max(0, Math.random() * 255));
   const b = Math.min(255, Math.max(0, Math.random() * 255));
 
-  return `rgba(${r}, ${g}, ${b}, 1)`;
+  return Color.rgb(r, g, b);
 }
 
+let baseColor = randomColor();
+
 function frame(c: Context, analysis: Analysis) {
-  const barCompletionPercentage =
-    c.msUntilNextBar / (c.currentBar.duration * 1000);
-  const beatCompletionPercentage =
-    c.msUntilNextBeat / (c.currentBeat.duration * 1000);
-  const segmentCompletionPercentage =
-    c.msUntilNextSegment / (c.currentSegment.duration * 1000);
+  if (c.barChanged) {
+    baseColor = randomColor();
+  }
 
-  const theColor = Color.rgb(100 + barCompletionPercentage * 155, 200, 200);
-  const modified = theColor.lighten(beatCompletionPercentage / 2);
-
-  fillWithColor(c, modified.toString());
+  const modifiedColor = baseColor.lighten(c.barCompletionPercentage * 0.8);
+  fillWithColor(c, modifiedColor.toString());
 }
